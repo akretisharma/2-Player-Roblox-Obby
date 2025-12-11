@@ -1,0 +1,77 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local pairEvent = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("PairPlayers")
+local removeEvent = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RemovePrompts")
+local unpairEvent = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("Unpair") 
+
+local paired = {}
+
+local function highlightPlayer(player, color)
+	if player.Character then
+		local highlight = Instance.new("Highlight")
+		highlight.Name = "PairHighlight"
+		highlight.FillColor = color
+		highlight.OutlineTransparency = 1
+		highlight.Adornee = player.Character
+		highlight.Parent = player.Character
+	end
+end
+
+local function removeAllPrompts()
+	for _, player in pairs(game.Players:GetPlayers()) do
+		if player.Character then
+			local root = player.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				local prompt = root:FindFirstChild("PairPrompt")
+				if prompt then
+					prompt:Destroy()
+				end
+			end
+		end
+	end
+end
+
+pairEvent.OnServerEvent:Connect(function(player, targetPlayer)
+	if not player or not targetPlayer then return end
+	if paired[player] or paired[targetPlayer] then return end
+
+	paired[player] = targetPlayer
+	paired[targetPlayer] = player
+
+	highlightPlayer(player, Color3.fromRGB(0, 0, 255))
+	highlightPlayer(targetPlayer, Color3.fromRGB(255, 0, 0))
+
+	print(player.Name .. " linked with " .. targetPlayer.Name)
+
+	for _, plr in pairs(game.Players:GetPlayers()) do
+		removeEvent:FireClient(plr)
+	end
+
+	pairEvent:FireClient(player, targetPlayer)
+	pairEvent:FireClient(targetPlayer, player)
+end)
+
+local function removeHighlight(player)
+	if player.Character then
+		local highlight = player.Character:FindFirstChild("PairHighlight")
+		if highlight then
+			highlight:Destroy()
+		end
+	end
+end
+
+unpairEvent.OnServerEvent:Connect(function(player)
+	local other = paired[player]
+	if not other then return end
+
+	removeHighlight(player)
+	removeHighlight(other)
+
+	paired[other] = nil
+	paired[player] = nil
+
+	print(player.Name .. " unpaired from " .. other.Name)
+
+	for _, plr in pairs(game.Players:GetPlayers()) do
+		removeEvent:FireClient(plr)
+	end
+end)
