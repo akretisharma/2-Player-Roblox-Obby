@@ -1,0 +1,47 @@
+local faces = {
+	Enum.NormalId.Top,
+	Enum.NormalId.Bottom,
+	Enum.NormalId.Left,
+	Enum.NormalId.Right,
+	Enum.NormalId.Front,
+	Enum.NormalId.Back,
+}
+
+local function addOutline(part, color)
+	for _, face in ipairs(faces) do
+		if part:FindFirstChild("OutlineGui_" .. face.Name) then continue end
+
+		local gui = Instance.new("SurfaceGui")
+		gui.Name = "OutlineGui_" .. face.Name
+		gui.Face = face
+		gui.AlwaysOnTop = false
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 50
+		gui.LightInfluence = 0
+		gui.ResetOnSpawn = false
+		gui.Parent = part
+
+		local frame = Instance.new("Frame")
+		frame.Size = UDim2.fromScale(1, 1)
+		frame.BackgroundTransparency = 1
+		frame.Parent = gui
+
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = color
+		stroke.Thickness = 3.5
+		stroke.Transparency = 0
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Parent = frame
+	end
+end
+
+for _, part in workspace:GetDescendants() do
+	if part:IsA("BasePart") and part:FindFirstChild("ColourTag") then
+		local tag = part:FindFirstChild("ColourTag")
+		if tag.Value == "Red" then
+			addOutline(part, Color3.fromRGB(255, 0, 0))
+		elseif tag.Value == "Blue" then
+			addOutline(part, Color3.fromRGB(0, 0, 255))
+		end
+	end
+end
