@@ -1,0 +1,103 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local pairEvent = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("PairPlayers")
+local removeEvent = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("RemovePrompts")
+local unpairEvent = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("Unpair")
+
+local localPlayer = Players.LocalPlayer
+local isPaired = false
+
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+local unPairGui = playerGui:FindFirstChild("UnpairGUI")
+if not unPairGui then
+	local template = ReplicatedStorage:WaitForChild("UnpairGUI")
+	if template then
+		unPairGui = template:Clone()
+		unPairGui.ResetOnSpawn = false
+		unPairGui.Parent = playerGui
+	else
+		warn("UnpairGUI template not found in ReplicatedStorage")
+		return
+	end
+end
+
+local unPairBtn = unPairGui:WaitForChild("UnpairButton") 
+unPairBtn.Visible = false
+
+local function setupPrompt()
+	if isPaired then return end
+
+	for _, otherPlayer in pairs(Players:GetPlayers()) do
+		if otherPlayer ~= localPlayer and otherPlayer.Character then
+			local root = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if root and not root:FindFirstChild("PairPrompt") then
+				local prompt = Instance.new("ProximityPrompt")
+				prompt.Name = "PairPrompt"
+				prompt.ActionText = "Pair"
+				prompt.ObjectText = otherPlayer.Name
+				prompt.MaxActivationDistance = 10
+				prompt.RequiresLineOfSight = false
+				prompt.Parent = root
+
+				prompt.Triggered:Connect(function()
+					pairEvent:FireServer(otherPlayer)
+				end)
+			end
+		end
+	end
+end
+
+localPlayer.CharacterAdded:Connect(function()
+	task.wait(1)
+	setupPrompt()
+end)
+
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		task.wait(1)
+		setupPrompt()
+	end)
+end)
+
+pairEvent.OnClientEvent:Connect(function(pairedPlayer)
+	isPaired = true
+	unPairBtn.Visible = true
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= localPlayer and player.Character then
+			local root = player.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				local prompt = root:FindFirstChild("PairPrompt")
+				if prompt then
+					prompt:Destroy()
+				end
+			end
+		end
+	end
+end)
+
+unPairBtn.MouseButton1Click:Connect(function()
+	unpairEvent:FireServer()
+	unPairBtn.Visible = false
+end)
+
+removeEvent.OnClientEvent:Connect(function()
+	isPaired = false
+	unPairBtn.Visible = false
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= localPlayer and player.Character then
+			local root = player.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				local prompt = root:FindFirstChild("PairPrompt")
+				if prompt then
+					prompt:Destroy()
+				end
+			end
+		end
+	end
+
+	setupPrompt()
+end)
+
+setupPrompt()
